@@ -1,0 +1,52 @@
+diff --git a/Pattern.struct.h b/Pattern.struct.h
+index 1946b432..975aaa5b 100644
+--- a/Pattern.struct.h
++++ b/Pattern.struct.h
+@@ -172,6 +172,11 @@ struct PatternCandle {
+ 
+ // Struct for calculating and storing 1-candlestick patterns.
+ struct PatternCandle1 : PatternCandle {
++  // MT5 build 5260 hides base overloads behind same-named derived methods. The
++  // using operator arrived with that change, so MT4's compiler rejects it.
++#ifdef __MQL5__
++  using PatternCandle::CheckPattern;
++#endif
+   PatternCandle1(unsigned int _pattern = 0) : PatternCandle(_pattern) {}
+   PatternCandle1(const BarOHLC& _c) : PatternCandle(PATTERN_1CANDLE_NONE) {
+     for (int i = 0; i < sizeof(int) * 8; i++) {
+@@ -295,6 +300,11 @@ struct PatternCandle1 : PatternCandle {
+ 
+ // Struct for calculating and storing 2-candlestick patterns.
+ struct PatternCandle2 : PatternCandle {
++  // MT5 build 5260 hides base overloads behind same-named derived methods. The
++  // using operator arrived with that change, so MT4's compiler rejects it.
++#ifdef __MQL5__
++  using PatternCandle::CheckPattern;
++#endif
+   PatternCandle2(unsigned int _pattern = 0) : PatternCandle(_pattern) {}
+   PatternCandle2(const BarOHLC& _c[]) : PatternCandle(PATTERN_2CANDLE_NONE) {
+     for (int i = 0; i < sizeof(int) * 8; i++) {
+@@ -404,6 +414,11 @@ struct PatternCandle2 : PatternCandle {
+ 
+ // Struct for calculating and storing 3-candlestick patterns.
+ struct PatternCandle3 : PatternCandle {
++  // MT5 build 5260 hides base overloads behind same-named derived methods. The
++  // using operator arrived with that change, so MT4's compiler rejects it.
++#ifdef __MQL5__
++  using PatternCandle::CheckPattern;
++#endif
+   PatternCandle3(unsigned int _pattern = 0) : PatternCandle(_pattern) {}
+   PatternCandle3(const BarOHLC& _c[]) : PatternCandle(PATTERN_3CANDLE_NONE) {
+     for (int i = 0; i < sizeof(int) * 8; i++) {
+@@ -520,6 +535,11 @@ struct PatternCandle3 : PatternCandle {
+ 
+ // Struct for calculating and storing 4-candlestick patterns.
+ struct PatternCandle4 : PatternCandle {
++  // MT5 build 5260 hides base overloads behind same-named derived methods. The
++  // using operator arrived with that change, so MT4's compiler rejects it.
++#ifdef __MQL5__
++  using PatternCandle::CheckPattern;
++#endif
+   PatternCandle4(unsigned int _pattern = 0) : PatternCandle(_pattern) {}
+   PatternCandle4(const BarOHLC& _c[]) : PatternCandle(PATTERN_4CANDLE_NONE) {
+     for (int i = 0; i < sizeof(int) * 8; i++) {

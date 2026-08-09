@@ -1,0 +1,15 @@
+diff --git a/Stg_Retracement.mqh b/Stg_Retracement.mqh
+index 3c9cc41..3f2ffe7 100644
+--- a/Stg_Retracement.mqh
++++ b/Stg_Retracement.mqh
+@@ -115,6 +115,10 @@ struct Stg_Retracement_Params_Defaults : StgParams {
+ };
+ 
+ struct Retracement_BarOHLC : public BarOHLC {
++  Retracement_BarOHLC() {}
++  // Converts from the base bar returned by GetOHLC(); newer MQL compilers no
++  // longer initialise a derived struct from its base implicitly.
++  Retracement_BarOHLC(const BarOHLC &_b) : BarOHLC(_b.open, _b.high, _b.low, _b.close, _b.time) {}
+   bool GetLevels(ENUM_PP_TYPE _type, ENUM_APPLIED_PRICE _ap, double &_pp, double &_r1, double &_r2, double &_r3,
+                  double &_r4, double &_s1, double &_s2, double &_s3, double &_s4) {
+     double _range = GetRange();
