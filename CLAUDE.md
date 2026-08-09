@@ -105,6 +105,50 @@ identical binaries, because the `set-*` targets mutate shared state in `mode.h` 
 goals do not serialise against it. Run `make Lite && make Advanced && make Rider` instead;
 correct output has distinct sizes, ascending Lite < Advanced < Rider.
 
+### Running the EA in a local terminal
+
+The edition targets emit `.ex4` only. For MT5, set the edition, compile with an MT5
+MetaEditor, then install:
+
+```sh
+make set-advanced                          # or set-lite / set-rider / set-elite
+make MTE=metaeditor64.exe compile-mql5     # -> src/EA31337.ex5
+make mt5-install                           # -> <terminal>/MQL5/Experts
+make mt5-install-indicators                # -> <terminal>/MQL5/Indicators
+```
+
+`MTE=metaeditor64.exe` is required: `MTE` auto-detects MT4's `metaeditor.exe`, which cannot
+compile `.mq5` at all. `compile-mql5` does no mode switching, so whatever `mode.h` holds is
+what gets built. `MT5_PREFIX` (default `~/.mt5`) and `MT4_PREFIX` (default `~/.wine`) locate
+the terminal by searching for `terminal64.exe` / `terminal.exe`.
+
+The indicator step matters. Several strategies use custom indicators, and how they are
+resolved depends on the build mode:
+
+```cpp
+#ifdef __resource__
+    custom_indi_name = "::" + INDI_SUPERTREND_PATH;  // embedded resource
+#else
+    custom_indi_name = "SuperTrend";                 // iCustom from MQL5/Indicators
+#endif
+```
+
+Without `__resource__` the EA calls `iCustom` by plain name, so the compiled indicators must
+be present in the terminal's `Indicators` folder or those strategies fail at runtime.
+`make indicators-mql5` builds all eight; `mt5-install-indicators` copies them across.
+
+Compiling the indicators needs the framework visible as `EA31337-classes` — they include
+`<EA31337-classes/Indicator.mqh>`, the layout CI builds them in. The `indicators-*` targets
+create `src/include/EA31337-classes` as a symlink to `classes` for this (gitignored).
+
+**`__resource__` does not work from an arbitrary checkout.** MQL5 confines `#resource` paths
+to the platform's own `MQL5` tree, so an outside directory fails with `error 313: invalid
+resource path`, and one resource (`\strategies-meta\Meta_News\data\news*.csv`) is MQL5-root
+relative. Symlinking the repo into `MQL5/Experts` does not help, since MetaEditor resolves
+the link to its real path. Building with resources embedded requires a real copy of the tree
+under `MQL5/Experts` — which is what the wiki's "clone into the platform's Experts folder"
+instruction is really about. Installing the indicators is the simpler local equivalent.
+
 ### Modern MT5 compatibility
 
 MT5 build 5260 turned method hiding into a hard error: a derived method with a base method's

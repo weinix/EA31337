@@ -17,3 +17,6 @@
 # Ignores configuration files.
 src/**.ini
 src/**.set
+
+# Ignores the framework alias generated for indicator compilation.
+src/include/EA31337-classes

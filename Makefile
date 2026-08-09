@@ -7,6 +7,7 @@ SHELL:=/usr/bin/env bash
 		set-lite-backtest set-advanced-backtest set-rider-backtest set-elite-backtest \
 		set-lite-optimize set-advanced-optimize set-rider-optimize set-elite-optimize \
 		clean clean-src clean-releases \
+		indicators-mql4 indicators-mql5 mt4-install mt5-install mt5-install-indicators \
 		EA Lite Advanced Rider Elite \
 		Release Lite-Release Advanced-Release Rider-Release Elite-Release \
 		Backtest Lite-Backtest Advanced-Backtest Rider-Backtest Elite-Backtest \
@@ -23,6 +24,22 @@ SRC=src
 MQL4=$(wildcard $(SRC)/*.mq4)
 MQL5=$(wildcard $(SRC)/*.mq5)
 EA=EA31337
+# Custom indicators embedded by the __resource__ mode. #resource references the
+# compiled binary, so these must be built before an EA that enables that mode.
+# ATR_MA_Trend and SuperTrend are MQL5-only; EA31337.mq4 omits both.
+INDI5=Other/Misc/ATR_MA_Trend Other/Oscillators/Arrows/ATR_MA_Slope \
+	Other/Oscillators/Multi/Elliott_Wave_Oscillator2 \
+	Other/Oscillators/Multi/SVE_Bollinger_Bands Other/Price/Range/TMA+CG_mladen_NRP \
+	Other/Price/Range/TMA_True Other/Price/Range/SAWA Other/Price/SuperTrend
+INDI4=Other/Oscillators/Arrows/ATR_MA_Slope \
+	Other/Oscillators/Multi/Elliott_Wave_Oscillator2 \
+	Other/Oscillators/Multi/SVE_Bollinger_Bands Other/Price/Range/TMA+CG_mladen_NRP \
+	Other/Price/Range/TMA_True Other/Price/Range/SAWA
+# Wine prefixes holding the platform installs, used by the mt?-install targets.
+MT4_PREFIX?=$(HOME)/.wine
+MT5_PREFIX?=$(HOME)/.mt5
+MT4_DIR=$(shell find $(MT4_PREFIX) -name terminal.exe -execdir pwd ';' -quit 2> /dev/null)
+MT5_DIR=$(shell find $(MT5_PREFIX) -name terminal64.exe -execdir pwd ';' -quit 2> /dev/null)
 EX4=$(SRC)/$(EA).ex4
 EX5=$(SRC)/$(EA).ex5
 VER=v$(shell grep 'define ea_version' $(SRC)/include/common/define.h | grep -o '[0-9].*[0-9]')
@@ -46,8 +63,10 @@ help:
 	@echo "Groups:     EA  Release  Backtest  Optimize  All"
 	@echo
 	@echo "Compiling:  compile-mql4  compile-mql5  test"
+	@echo "            indicators-mql4  indicators-mql5   (custom indicators)"
 	@echo "Modes:      set-none  set-testing  set-<edition>[-release|-backtest|-optimize]"
-	@echo "Other:      clean-src  mt4-install  requirements  help"
+	@echo "Installing: mt4-install  mt5-install  mt5-install-indicators"
+	@echo "Other:      clean-src  requirements  help"
 	@echo
 	@echo "Variables:  MTE=$(MTE)"
 	@echo "            WINE=$(WINE)"
@@ -305,4 +324,40 @@ $(OUT)/$(EA)-Elite-Optimize-%.ex4: \
 		cp -v "$(EX4)" "$(OUT)/$(EA)-Elite-Optimize-$(VER).ex4"
 
 mt4-install:
-		install -v "$(EX4)" "$(shell find ~/.wine -name terminal.exe -execdir pwd ';' -quit)/MQL4/Experts"
+		@test -n "$(MT4_DIR)" || { echo "No MT4 found under $(MT4_PREFIX); set MT4_PREFIX."; exit 1; }
+		install -v "$(EX4)" "$(MT4_DIR)/MQL4/Experts"
+
+mt5-install:
+		@test -n "$(MT5_DIR)" || { echo "No MT5 found under $(MT5_PREFIX); set MT5_PREFIX."; exit 1; }
+		@test -s "$(EX5)" || { echo "$(EX5) missing; run: make MTE=metaeditor64.exe compile-mql5"; exit 1; }
+		install -v "$(EX5)" "$(MT5_DIR)/MQL5/Experts"
+
+# Without __resource__ the EA loads these by plain name via iCustom, so they must
+# sit in the terminal's Indicators folder. Run indicators-mql5 first.
+mt5-install-indicators:
+		@test -n "$(MT5_DIR)" || { echo "No MT5 found under $(MT5_PREFIX); set MT5_PREFIX."; exit 1; }
+		@for i in $(INDI5); do \
+			test -s "$(SRC)/indicators/$$i.ex5" \
+				&& install -v "$(SRC)/indicators/$$i.ex5" "$(MT5_DIR)/MQL5/Indicators" \
+				|| echo "missing $$i.ex5 - run: make indicators-mql5"; \
+		done
+
+# The indicators include <EA31337-classes/...>, the layout CI builds them in, so
+# expose the framework submodule under that name within the include root.
+$(SRC)/include/EA31337-classes:
+		ln -sfn classes $@
+
+# Compiles the custom indicators embedded by the __resource__ mode. Needs an MT5
+# MetaEditor, so it overrides MTE when the auto-detected one is MT4's.
+indicators-mql5: $(SRC)/include/EA31337-classes
+		@test -s metaeditor64.exe || { echo "metaeditor64.exe required; copy it from an MT5 installation."; exit 1; }
+		@for i in $(INDI5); do \
+			$(WINE) metaeditor64.exe /log:CON /compile:"$(SRC)\\indicators\\$${i//\//\\}.mq5" /inc:"$(SRC)" > /dev/null 2>&1 || true; \
+			test -s "$(SRC)/indicators/$$i.ex5" && echo "compiled $$i.ex5" || echo "FAILED $$i.mq5"; \
+		done
+
+indicators-mql4: $(SRC)/include/EA31337-classes
+		@for i in $(INDI4); do \
+			$(WINE) $(MTE) /log:CON /compile:"$(SRC)\\indicators\\$${i//\//\\}.mq4" /inc:"$(SRC)" > /dev/null 2>&1 || true; \
+			test -s "$(SRC)/indicators/$$i.ex4" && echo "compiled $$i.ex4" || echo "FAILED $$i.mq4"; \
+		done
