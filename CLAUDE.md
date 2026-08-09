@@ -32,6 +32,7 @@ binary in the repo root — see "Supplying MetaEditor" below, because the Makefi
 longer download one.
 
 ```sh
+make                      # help: target list, resolved MTE/WINE, output path
 make Lite                 # Lite build -> ./EA31337-Lite-v3.000.ex4
 make Advanced             # Advanced build
 make Rider                # Rider build

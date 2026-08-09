@@ -1,6 +1,6 @@
 SHELL:=/usr/bin/env bash
 
-.PHONY: all test compile-mql4 compile-mql5 requirements \
+.PHONY: all help test compile-mql4 compile-mql5 requirements \
 		set-none set-testing \
 		set-lite set-advanced set-rider set-elite \
 		set-lite-release set-advanced-release set-rider-release set-elite-release \
@@ -34,6 +34,29 @@ WINEDEBUG=fixme-all
 # Wine binary. Builds since Wine 10 are WoW64 and ship "wine" only, with no
 # separate wine64, so fall back to it when wine64 is absent.
 WINE?=$(shell command -v wine64 2> /dev/null || command -v wine 2> /dev/null)
+
+# Shown when make runs with no target. Keep it before any other target so that
+# it stays the default goal.
+help:
+	@echo "EA31337 $(VER) - build an Expert Advisor with MetaEditor under Wine."
+	@echo
+	@echo "Editions:   Lite  Advanced  Rider  Elite"
+	@echo "Variants:   <Edition>-Release  <Edition>-Backtest  <Edition>-Optimize"
+	@echo "            <Edition>-All        (all four variants of one edition)"
+	@echo "Groups:     EA  Release  Backtest  Optimize  All"
+	@echo
+	@echo "Compiling:  compile-mql4  compile-mql5  test"
+	@echo "Modes:      set-none  set-testing  set-<edition>[-release|-backtest|-optimize]"
+	@echo "Other:      clean-src  mt4-install  requirements  help"
+	@echo
+	@echo "Variables:  MTE=$(MTE)"
+	@echo "            WINE=$(WINE)"
+	@echo "            OUT=$(OUT)  SRC=$(SRC)"
+	@echo
+	@echo "Output:     $(OUT)/$(EA)-<Edition>-$(VER).ex4"
+	@echo
+	@echo "Build one edition per invocation. Combining goals (make Lite Advanced)"
+	@echo "yields identical binaries, as the set-* targets share state in mode.h."
 
 requirements:
 	type -a git ex &> /dev/null
@@ -93,7 +116,7 @@ set-none:
 	test -w $(SRC) && ex +":g@^#define@s@^@//" -scwq! $(SRC)/include/common/mode.h || true
 
 set-lite: set-none
-	@$(MAKE) -f $(FILE)
+	@$(MAKE) -f $(FILE) requirements
 
 set-advanced: set-none
 	@$(MAKE) -f $(FILE) set-mode MODE="__advanced__"
