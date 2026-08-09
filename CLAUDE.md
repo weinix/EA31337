@@ -271,6 +271,35 @@ docker compose -f docker/tests/Advanced/docker-compose.yml up      # month-by-mo
 docker compose -f docker/backtest/Lite/all-yearly/2021/docker-compose.yml up
 ```
 
+That image is MT4-era (Wine 6.0, too old for current MetaTrader installers). For MQL5
+backtests use `docker/mt5-latest/` instead -- Ubuntu 24.04 + WineHQ devel + the current MT5,
+installed headlessly at build time (see the comments in its Dockerfile and install-mt5.sh for
+the traps: AutoHotkey drives the wizard, the whole install must run under one Xvfb, Wine 11.0
+stable trips the installer's anti-tamper check, and `wineboot` must not be awaited with
+`wineserver -w`):
+
+```sh
+docker build -t ea31337/mt5-latest:local docker/mt5-latest/
+mkdir -p -m 777 _results   # the container writes as uid 1001
+docker run --rm \
+  -v "$HOME/.mt5:/opt/prefix:ro" \
+  -v "$PWD/_results:/opt/_results" \
+  -v "$PWD/src/EA31337.ex5:/opt/ea/EA31337.ex5:ro" \
+  -v "$PWD/src/indicators:/opt/indicators:ro" \
+  -e EA_PATH=/opt/ea/EA31337.ex5 -e INDI_DIR=/opt/indicators \
+  -e BT_EXPERT=EA31337 -e BT_SYMBOL=EURUSD -e BT_PERIOD=M1 -e BT_MODEL=1 \
+  -e BT_FROM=2022.01.01 -e BT_TO=2026.08.01 \
+  ea31337/mt5-latest:local
+```
+
+`/opt/prefix` must be a Wine prefix whose terminal has logged into an account at least once
+(a copy of the host's `~/.mt5` works): the MT5 tester refuses to start without an account,
+and `accounts.dat` only survives inside the prefix that created it. The tester then downloads
+the requested M1 history from the broker on its own -- MetaQuotes-Demo currently serves
+EURUSD back past 2022. Reports (`report.htm`/`report.png`) land in `/opt/_results`. Any
+argument overrides the entrypoint (`docker run ... ea31337/mt5-latest:local bash` for a
+shell).
+
 Run `make test` to syntax-check both `.mq4` and `.mq5` through MetaEditor without producing
 release artifacts.
 
