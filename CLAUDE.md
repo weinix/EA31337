@@ -35,6 +35,7 @@ longer download one.
 make Lite                 # Lite build -> ./EA31337-Lite-v3.000.ex4
 make Advanced             # Advanced build
 make Rider                # Rider build
+make Elite                # Elite build
 make Lite-Release         # + __release__
 make Advanced-Backtest    # + __backtest__
 make Rider-Optimize       # + __optimize__
@@ -229,4 +230,29 @@ release artifacts.
 - `.editorconfig`: LF, UTF-8, 2-space indent (tabs in the Makefile), final newline.
 - `.mqproj` files are UTF-16LE-BOM per `.gitattributes`; `*.ex?` are binary and must not be
   committed (`forbid-binary` enforces this).
+- YAML must satisfy `.yamllint`: correct indentation, 120-column lines, and `truthy` values
+  spelled exactly `true`/`false` (not `yes`/`on`). GitHub Actions' `on:` key needs the
+  `# yamllint disable-line rule:truthy` comment already used in every workflow.
+- Sort lists lexicographically where order is not otherwise meaningful.
+- The framework carries dual-target sources: `.mqh`/`.h` files compile both under MetaEditor
+  and under gcc as C++ (guarded by `#ifndef __MQL__`), which is why `src/include/classes` has
+  C++ compile tests. Changes to shared headers should keep both paths valid.
+- `src/include/classes/CONTRIBUTING.md` holds class-level contribution guidelines.
 - `master` is the release branch; work merges into it via `dev`.
+
+## Ansible
+
+`ansible/` provisions a container with the MetaTrader platform, mirroring how the
+`ea31337/ea-tester` image does it — roles `ea31337.metatrader`, `ea31337.wine`, and
+`ea31337.xvfb` from `requirements.yml`, against a docker-connection inventory host
+`ea31337-ubuntu-latest`.
+
+```sh
+ansible-galaxy install -r ansible/requirements.yml
+ansible-playbook -i ansible/inventory/docker-containers.yml \
+  ansible/playbooks/docker-compile-ea.mql5.yml
+```
+
+Two caveats. Despite its name the playbook only *installs* MT5; it runs no compile step. And
+`ea31337.metatrader` fetches the current MT5 build, so the tree must carry the build 5260
+fixes above — which it now does.
