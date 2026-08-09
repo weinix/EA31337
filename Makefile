@@ -13,7 +13,11 @@ SHELL:=/usr/bin/env bash
 		Optimize Lite-Optimize Advanced-Optimize Rider-Optimize \
 		All Lite-All Advanced-All Rider-All
 
-MTE=metaeditor64.exe
+# MetaEditor binary to compile with. MT4's metaeditor.exe is preferred when
+# present: recent MT5 editors reject the pinned framework under their newer
+# language rules (method hiding, struct copying), whereas MT4's compiler
+# accepts it and handles the MQL4 targets built by default.
+MTE?=$(if $(wildcard metaeditor.exe),metaeditor.exe,metaeditor64.exe)
 MTV=5.0.0.2361
 SRC=src
 MQL4=$(wildcard $(SRC)/*.mq4)
@@ -27,9 +31,13 @@ OUT=.
 MKFILE=$(abspath $(lastword $(MAKEFILE_LIST)))
 CWD=$(notdir $(patsubst %/,%,$(dir $(MKFILE))))
 WINEDEBUG=fixme-all
+# Wine binary. Builds since Wine 10 are WoW64 and ship "wine" only, with no
+# separate wine64, so fall back to it when wine64 is absent.
+WINE?=$(shell command -v wine64 2> /dev/null || command -v wine 2> /dev/null)
 
 requirements:
-	type -a git ex wine64 &> /dev/null
+	type -a git ex &> /dev/null
+	@test -n "$(WINE)" || { echo "Wine not found. Install wine (or wine-staging)."; exit 1; }
 
 Lite:				$(OUT)/$(EA)-Lite-%.ex4
 Advanced:			$(OUT)/$(EA)-Advanced-%.ex4
@@ -54,11 +62,16 @@ Rider-All:			Rider Rider-Release Rider-Backtest Rider-Optimize
 All:				requirements $(MTE) Lite-All Advanced-All Rider-All
 
 test: requirements set-mode $(MTE)
-	wine64 $(MTE) .exe /s /i:$(SRC) /mql4 $(MQL4)
-	wine64 $(MTE) /s /i:$(SRC) /mql5 $(MQL4)
+	$(WINE) $(MTE) .exe /s /i:$(SRC) /mql4 $(MQL4)
+	$(WINE) $(MTE) /s /i:$(SRC) /mql5 $(MQL4)
 
+# Fetching MetaEditor this way no longer works: the MT-Platforms repository was
+# taken down (HTTP 451), so -f turns the 451 into a readable failure instead of
+# unzip choking on an HTML error page. Supply MetaEditor yourself instead, by
+# copying metaeditor.exe from an MT4 installation into this directory.
 $(MTE):
-	curl -LO https://github.com/EA31337/MT-Platforms/releases/download/$(MTV)/mt-$(MTV).zip
+	curl -fLO https://github.com/EA31337/MT-Platforms/releases/download/$(MTV)/mt-$(MTV).zip \
+		|| { echo "Cannot download $(MTE). Copy it from a MetaTrader installation into $(CURDIR)."; exit 1; }
 	unzip -o mt-$(MTV).zip */$(MTE)
 	cp -v */$(MTE) .
 
@@ -144,12 +157,12 @@ Optimize: $(MTE) \
 		$(OUT)/$(EA)-Rider-Optimize-%.ex4
 
 compile-mql4: requirements $(MTE) $(SRC)/$(EA).mq4 $(SRC)/include/common/mode.h clean-src
-	file='$(MQL4)'; wine64 $(MTE) /log:CON /compile:"$${file//\//\\}" /inc:"$(SRC)" || true
+	file='$(MQL4)'; $(WINE) $(MTE) /log:CON /compile:"$${file//\//\\}" /inc:"$(SRC)" || true
 	test -s $(SRC)/$(EA).ex4 && echo $(MQL4) compiled.
 
 compile-mql5: requirements $(MTE) $(SRC)/$(EA).mq4 $(SRC)/include/common/mode.h clean-src
-	file='$(MQL5)'; wine64 $(MTE) /log:CON /compile:"$${file//\//\\}" /inc:"$(SRC)" || true
-	test -s $(SRC)/$(EA).ex5 && @echo $(MQL5) compiled.
+	file='$(MQL5)'; $(WINE) $(MTE) /log:CON /compile:"$${file//\//\\}" /inc:"$(SRC)" || true
+	test -s $(SRC)/$(EA).ex5 && echo $(MQL5) compiled.
 
 $(OUT)/$(EA)-Lite-%.ex4: \
 		set-lite \
