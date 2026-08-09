@@ -24,3 +24,6 @@
 *.mq?     utf8 diff=c
 *.mqproj  utf16 diff=c
 *.txt     utf8 diff=c
+
+# Patch files carry diff whitespace that must not be flagged.
+*.patch   -whitespace

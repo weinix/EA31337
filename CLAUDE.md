@@ -28,7 +28,7 @@ git submodule update --init --recursive
 ## Build
 
 Compilation runs MetaEditor under Wine. Requires `git`, `ex`, Wine, and a MetaEditor
-binary in the repo root — see "Supplying MetaEditor" below, because the Makefile can no
+binary in the repo root -- see "Supplying MetaEditor" below, because the Makefile can no
 longer download one.
 
 ```sh
@@ -57,8 +57,8 @@ targets in `ea31337/ea-tester`):
 docker compose -f docker/compile/lite/docker-compose.yml up
 ```
 
-Note the image bundles **no** MetaEditor and no Wine prefix — it installs MetaTrader at
-runtime via Ansible (`/opt/scripts/install_mt{4,5}.sh` → `/opt/ansible/install-mt{4,5}.yml`,
+Note the image bundles **no** MetaEditor and no Wine prefix -- it installs MetaTrader at
+runtime via Ansible (`/opt/scripts/install_mt{4,5}.sh` -> `/opt/ansible/install-mt{4,5}.yml`,
 role `ea31337.metatrader`, using the official MetaQuotes installer under xvfb). The MT5 URL
 is unpinned and serves the current build, so Docker hits the same version problem described
 below; only its MT4 URL is pinned.
@@ -72,13 +72,13 @@ The EA version string lives in `src/include/common/define.h` (`ea_version`); the
 down and now returns **HTTP 451**, so the download fails permanently. Supply the binary
 yourself by copying `metaeditor.exe` from an MT4 installation into the repo root; `MTE`
 picks it up automatically, and `.gitignore`'s `*.ex?` keeps it untracked. Copy MT5's
-`MetaEditor64.exe` in as `metaeditor64.exe` too if you build MQL5 targets — `MTE5` finds it
+`MetaEditor64.exe` in as `metaeditor64.exe` too if you build MQL5 targets -- `MTE5` finds it
 there. Neither is tracked, so a fresh clone needs both copied in again.
 
 **Use MT4's MetaEditor, not MT5's.** Current MT5 editors (build 6104 tested) reject the
-pinned `EA31337-classes` framework with ~100 errors — `error 226: not allowed for objects
+pinned `EA31337-classes` framework with ~100 errors -- `error 226: not allowed for objects
 with protected members or inheritance` and `warning 89: ... due to new rules of method
-hiding` — concentrated in `DictStruct.mqh`, `Dict.mqh`, and `Indicator.mqh`. The framework
+hiding` -- concentrated in `DictStruct.mqh`, `Dict.mqh`, and `Indicator.mqh`. The framework
 predates those language rules. MT4's compiler is frozen, accepts the code, and is the right
 tool anyway since the default targets all build `.mq4`. This is not an MQL4-vs-MQL5 issue:
 both dialects fail identically (101 vs 100 errors) under a modern MT5 editor.
@@ -93,10 +93,10 @@ cp ~/.mt4/drive_c/Program\ Files\ \(x86\)/XM\ MT4/metaeditor.exe .
 
 Two Makefile variables absorb the environment differences, both overridable:
 
-- `WINE` — prefers `wine64`, falls back to `wine`. Wine 10+ builds are WoW64 and ship only
+- `WINE` -- prefers `wine64`, falls back to `wine`. Wine 10+ builds are WoW64 and ship only
   `wine`, while the Makefile historically hardcoded `wine64`. No symlink needed.
-- `MTE` — MQL4 compiler; prefers `metaeditor.exe` when present, else `metaeditor64.exe`.
-- `MTE5` — MQL5 compiler; prefers `metaeditor64.exe`, and never falls back to MT4's
+- `MTE` -- MQL4 compiler; prefers `metaeditor.exe` when present, else `metaeditor64.exe`.
+- `MTE5` -- MQL5 compiler; prefers `metaeditor64.exe`, and never falls back to MT4's
   `metaeditor.exe`, which cannot compile `.mq5` at all. Used by `compile-mql5`,
   `indicators-mql5` and the `/mql5` half of `test`.
 
@@ -123,7 +123,7 @@ make set-advanced                          # or set-lite / set-rider / set-elite
 make mt5-install mt5-install-indicators    # compiles, then installs both
 ```
 
-`mt5-install` depends on `compile-mql5`, so it always installs a freshly built binary —
+`mt5-install` depends on `compile-mql5`, so it always installs a freshly built binary --
 necessary because `clean-src` runs before every compile and removes `src/*.ex?`, so a
 previously built artifact does not survive an unrelated `make Lite`.
 
@@ -146,7 +146,7 @@ Without `__resource__` the EA calls `iCustom` by plain name, so the compiled ind
 be present in the terminal's `Indicators` folder or those strategies fail at runtime.
 `make indicators-mql5` builds all eight; `mt5-install-indicators` copies them across.
 
-Compiling the indicators needs the framework visible as `EA31337-classes` — they include
+Compiling the indicators needs the framework visible as `EA31337-classes` -- they include
 `<EA31337-classes/Indicator.mqh>`, the layout CI builds them in. The `indicators-*` targets
 create `src/include/EA31337-classes` as a symlink to `classes` for this (gitignored).
 
@@ -155,7 +155,7 @@ to the platform's own `MQL5` tree, so an outside directory fails with `error 313
 resource path`, and one resource (`\strategies-meta\Meta_News\data\news*.csv`) is MQL5-root
 relative. Symlinking the repo into `MQL5/Experts` does not help, since MetaEditor resolves
 the link to its real path. Building with resources embedded requires a real copy of the tree
-under `MQL5/Experts` — which is what the wiki's "clone into the platform's Experts folder"
+under `MQL5/Experts` -- which is what the wiki's "clone into the platform's Experts folder"
 instruction is really about. Installing the indicators is the simpler local equivalent.
 
 ### Modern MT5 compatibility
@@ -164,7 +164,7 @@ MT5 build 5260 turned method hiding into a hard error: a derived method with a b
 name now *hides* rather than overloads it, and `using Base::Method;` is the sanctioned
 remedy. The same release tightened implicit copying of objects with protected members or
 inheritance. See the [build 5260 release notes][mt5-5260]. This broke the framework, which
-predates those rules — the compiler had warned for years via *"deprecated behavior, hidden
+predates those rules -- the compiler had warned for years via *"deprecated behavior, hidden
 method calling will be disabled in a future MQL compiler version"*.
 
 It is not an MQL4-versus-MQL5 problem: both dialects failed identically (101 vs 100 errors)
@@ -174,12 +174,12 @@ Getting to a clean build took three steps, each measured against build 6104:
 
 | Step | Change | Errors |
 | --- | --- | --- |
-| — | pinned framework | 100 |
-| 1 | `src/include/classes` → upstream `v3.000.2-dev` | 6 |
+| -- | pinned framework | 100 |
+| 1 | `src/include/classes` -> upstream `v3.000.2-dev` | 6 |
 | 2 | `using PatternCandle::CheckPattern;` in `PatternCandle1..4` | 2 |
 | 3 | converting constructor on `Retracement_BarOHLC` | 0 |
 
-Step 1 does nearly all of it and is upstream's own work — commit `bd8f527d` *"Fixing
+Step 1 does nearly all of it and is upstream's own work -- commit `bd8f527d` *"Fixing
 compilation errors due to more strict code syntax requirements in new MT5 editor"*. Note the
 framework's `dev` and `master` branches are dormant since 2023; active development lives on
 versioned `vX.Y-dev` branches, and `v3.000.2-dev` was updated in 2026.
@@ -194,7 +194,7 @@ git -C src/strategies/Retracement apply ../../../patches/0002-retracement-derive
 ```
 
 The `using` declarations are wrapped in `#ifdef __MQL5__`. That operator only exists from
-build 5260, so MT4's compiler rejects it outright — leaving them unguarded builds MQL5 but
+build 5260, so MT4's compiler rejects it outright -- leaving them unguarded builds MQL5 but
 breaks every default (MQL4) target.
 
 Verified after all three steps: MQL4 via MT4's editor, 0 errors / 0 warnings; MQL5 via build
@@ -214,7 +214,7 @@ restores it with `git checkout -- src/include/common/mode.h` (`set-none`). Uncom
 edits to `mode.h` will be silently discarded by any `make` target. CI instead overwrites the
 file wholesale, e.g. `echo '#define __cli__' > src/include/common/mode.h`.
 
-`src/include/common/code-conf.h` derives implied modes from the selected ones — `__rider__`
+`src/include/common/code-conf.h` derives implied modes from the selected ones -- `__rider__`
 implies `__advanced__`, `__elite__` implies `__input2__`, `__release__`/`__optimize__` undefine
 debug/backtest flags. Add new cross-mode implications there, not in `mode.h`.
 
@@ -223,10 +223,10 @@ debug/backtest flags. Add new cross-mode implications there, not in `mode.h`.
 `src/EA31337.mq4` is a thin shim that `#include`s `src/EA31337.mq5`; **all real code is the
 `.mq5` file**, guarded with `#ifdef __MQL5__` where the platforms diverge. Edit the `.mq5`.
 
-Include chain: `EA31337.mq5` → `include/ea.h` → `include/includes.h`, which pulls in
-`common/mode.h` → `code-conf.h` → `define.h` → `enum.h` → framework classes → `common/struct.h`
-→ submodule strategy enums → strategy managers → `include/inputs.h` → strategy includes.
-Order matters — these headers depend on macros defined earlier in the chain.
+Include chain: `EA31337.mq5` -> `include/ea.h` -> `include/includes.h`, which pulls in
+`common/mode.h` -> `code-conf.h` -> `define.h` -> `enum.h` -> framework classes -> `common/struct.h`
+-> submodule strategy enums -> strategy managers -> `include/inputs.h` -> strategy includes.
+Order matters -- these headers depend on macros defined earlier in the chain.
 
 - `include/ea.h` defines `class EA31337 : public EA` (the framework base class). It owns
   `StrategyAddToTf`/`StrategyAddToTfs` (strategy instantiation, magic-number assignment),
@@ -245,20 +245,20 @@ Order matters — these headers depend on macros defined earlier in the chain.
 - Per-edition configuration is split into `common/{lite,advanced,rider,elite}/`:
   `defines.h` sets `ea_name`, `inputs.mqh` declares that edition's `input` parameters.
   `include/inputs.h` picks one of them based on the mode macros and then declares the
-  shared risk/trade/logging inputs. Inputs are declared twice — `extern`/`input string`
+  shared risk/trade/logging inputs. Inputs are declared twice -- `extern`/`input string`
   section headers for MQL4 vs `input group` for MQL5.
 
 ## Testing and CI
 
 There is no unit-test suite; verification is compilation plus backtesting.
 
-- `.github/workflows/check.yml` — pre-commit hooks on every push/PR.
-- `.github/workflows/compile.yml` — Windows matrix: {Lite, Advanced, Elite, Rider} ×
-  {`__input__`, `__resource__`} × {MQL4, MQL5}. This is the real compile gate.
-- `.github/workflows/test.yml` — compiles, then runs MT5 backtests (EURUSD M1, 2 weeks of
+- `.github/workflows/check.yml` -- pre-commit hooks on every push/PR.
+- `.github/workflows/compile.yml` -- Windows matrix: {Lite, Advanced, Elite, Rider} x
+  {`__input__`, `__resource__`} x {MQL4, MQL5}. This is the real compile gate.
+- `.github/workflows/test.yml` -- compiles, then runs MT5 backtests (EURUSD M1, 2 weeks of
   2022 and 2024) per edition via `fx31337/mql-tester-action`.
-- `.github/workflows/backtest.yml` — triggered by releases and `v*-backtest` branches.
-- `.github/workflows/optimize-*.yml` — each triggers only on a push to its own branch
+- `.github/workflows/backtest.yml` -- triggered by releases and `v*-backtest` branches.
+- `.github/workflows/optimize-*.yml` -- each triggers only on a push to its own branch
   (`optimize-tf`, `optimize-risk`, `optimize-strats-oct`, `optimize-strats-soft`,
   `optimize-strats-stops`) and consumes the `.set` files under
   `sets/optimize/<Edition>/<group>/`.
@@ -279,7 +279,7 @@ release artifacts.
 - Lint everything with `pre-commit run --all-files`. Hooks: markdownlint (`.markdownlint.yaml`),
   yamllint (`.yamllint`), shfmt, `require-ascii`, `forbid-binary`, `git-check` (attributes in
   `.gitattributes`).
-- MQL/C++ formatting: `.clang-format` — Google style, 120-column limit,
+- MQL/C++ formatting: `.clang-format` -- Google style, 120-column limit,
   `IndentPPDirectives: BeforeHash`.
 - `.editorconfig`: LF, UTF-8, 2-space indent (tabs in the Makefile), final newline.
 - `.mqproj` files are UTF-16LE-BOM per `.gitattributes`; `*.ex?` are binary and must not be
@@ -297,7 +297,7 @@ release artifacts.
 ## Ansible
 
 `ansible/` provisions a container with the MetaTrader platform, mirroring how the
-`ea31337/ea-tester` image does it — roles `ea31337.metatrader`, `ea31337.wine`, and
+`ea31337/ea-tester` image does it -- roles `ea31337.metatrader`, `ea31337.wine`, and
 `ea31337.xvfb` from `requirements.yml`, against a docker-connection inventory host
 `ea31337-ubuntu-latest`.
 
@@ -309,4 +309,4 @@ ansible-playbook -i ansible/inventory/docker-containers.yml \
 
 Two caveats. Despite its name the playbook only *installs* MT5; it runs no compile step. And
 `ea31337.metatrader` fetches the current MT5 build, so the tree must carry the build 5260
-fixes above — which it now does.
+fixes above -- which it now does.

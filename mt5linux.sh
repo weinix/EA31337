@@ -15,112 +15,112 @@ echo OS: $NAME $VERSION_ID
 
 echo Update and install...
 if [ "$NAME" = "Fedora Linux" ]; then
-    echo Update system
-    sudo dnf update
-    sudo dnf upgrade -y
+  echo Update system
+  sudo dnf update
+  sudo dnf upgrade -y
 
-    echo Choose Wine repo
-    sudo rm /etc/yum.repos.d/winehq*
-    if (( $VERSION_ID >= 43 )); then
-       sudo dnf config-manager addrepo --from-repofile=https://dl.winehq.org/wine-builds/fedora/43/winehq.repo
-    elif (( $VERSION_ID < 43 && $VERSION_ID >= 42 )); then
-       sudo dnf config-manager addrepo --from-repofile=https://dl.winehq.org/wine-builds/fedora/42/winehq.repo
-    else
-       sudo dnf config-manager addrepo --from-repofile=https://dl.winehq.org/wine-builds/fedora/41/winehq.repo
-    fi
+  echo Choose Wine repo
+  sudo rm /etc/yum.repos.d/winehq*
+  if (($VERSION_ID >= 43)); then
+    sudo dnf config-manager addrepo --from-repofile=https://dl.winehq.org/wine-builds/fedora/43/winehq.repo
+  elif (($VERSION_ID < 43 && $VERSION_ID >= 42)); then
+    sudo dnf config-manager addrepo --from-repofile=https://dl.winehq.org/wine-builds/fedora/42/winehq.repo
+  else
+    sudo dnf config-manager addrepo --from-repofile=https://dl.winehq.org/wine-builds/fedora/41/winehq.repo
+  fi
 
-    echo Install Wine and Wine Mono
-    sudo dnf update
-    sudo dnf install winehq-$WINE_VERSION -y
-    sudo dnf install wine-mono -y
+  echo Install Wine and Wine Mono
+  sudo dnf update
+  sudo dnf install winehq-$WINE_VERSION -y
+  sudo dnf install wine-mono -y
 elif [ "$ID" = "arch" ] || [[ " ${ID_LIKE:-} " == *" arch "* ]]; then
-    echo "Arch Linux found: $NAME ${VERSION_ID:-rolling}"
+  echo "Arch Linux found: $NAME ${VERSION_ID:-rolling}"
 
-    # WineHQ publishes no Arch builds, so Wine comes from the official [extra] repo.
-    # Since Wine 10 the Arch package is a WoW64 build: one "wine" binary runs 64-bit
-    # programs, there is no separate wine64, and no multilib/lib32 packages are needed.
-    # Arch has no wine-devel; wine-staging already tracks the development branch.
-    case "$WINE_VERSION" in
-        staging | devel) WINE_PKG="wine-staging" ;;
-        *) WINE_PKG="wine" ;;
-    esac
+  # WineHQ publishes no Arch builds, so Wine comes from the official [extra] repo.
+  # Since Wine 10 the Arch package is a WoW64 build: one "wine" binary runs 64-bit
+  # programs, there is no separate wine64, and no multilib/lib32 packages are needed.
+  # Arch has no wine-devel; wine-staging already tracks the development branch.
+  case "$WINE_VERSION" in
+    staging | devel) WINE_PKG="wine-staging" ;;
+    *) WINE_PKG="wine" ;;
+  esac
 
-    echo Update system
-    sudo pacman -Syu --noconfirm
+  echo Update system
+  sudo pacman -Syu --noconfirm
 
-    echo "Install Wine ($WINE_PKG), Wine Mono and Wine Gecko"
-    # wine and wine-staging conflict with each other, so swapping flavours needs a
-    # confirmation that --noconfirm would answer with the default "no".
-    OTHER_PKG=$([ "$WINE_PKG" = "wine" ] && echo wine-staging || echo wine)
-    if pacman -Qq "$OTHER_PKG" &> /dev/null; then
-        echo "$OTHER_PKG is installed and conflicts with $WINE_PKG - confirm the replacement"
-        sudo pacman -S --needed "$WINE_PKG"
-    else
-        sudo pacman -S --needed --noconfirm "$WINE_PKG"
-    fi
+  echo "Install Wine ($WINE_PKG), Wine Mono and Wine Gecko"
+  # wine and wine-staging conflict with each other, so swapping flavours needs a
+  # confirmation that --noconfirm would answer with the default "no".
+  OTHER_PKG=$([ "$WINE_PKG" = "wine" ] && echo wine-staging || echo wine)
+  if pacman -Qq "$OTHER_PKG" &> /dev/null; then
+    echo "$OTHER_PKG is installed and conflicts with $WINE_PKG - confirm the replacement"
+    sudo pacman -S --needed "$WINE_PKG"
+  else
+    sudo pacman -S --needed --noconfirm "$WINE_PKG"
+  fi
 
-    # Installing these locally stops Wine prompting to download them on first run.
-    sudo pacman -S --needed --noconfirm wine-mono wine-gecko curl
+  # Installing these locally stops Wine prompting to download them on first run.
+  sudo pacman -S --needed --noconfirm wine-mono wine-gecko curl
 else
-    echo Update system
-    sudo apt update
-    sudo apt upgrade -y
+  echo Update system
+  sudo apt update
+  sudo apt upgrade -y
 
-    echo Get full version
-    sudo apt install bc wget curl -y
-    VERSION_FULL=$(echo "$VERSION_ID * 100" | bc -l | cut -d "." -f1)
+  echo Get full version
+  sudo apt install bc wget curl -y
+  VERSION_FULL=$(echo "$VERSION_ID * 100" | bc -l | cut -d "." -f1)
 
-    echo Choose Wine repo
-    sudo rm /etc/apt/sources.list.d/winehq*
+  echo Choose Wine repo
+  sudo rm /etc/apt/sources.list.d/winehq*
 
-    sudo dpkg --add-architecture i386
-    sudo mkdir -pm755 /etc/apt/keyrings
-    sudo wget -O - https://dl.winehq.org/wine-builds/winehq.key | sudo gpg --dearmor -o /etc/apt/keyrings/winehq-archive.key -
+  sudo dpkg --add-architecture i386
+  sudo mkdir -pm755 /etc/apt/keyrings
+  sudo wget -O - https://dl.winehq.org/wine-builds/winehq.key | sudo gpg --dearmor -o /etc/apt/keyrings/winehq-archive.key -
 
-    if [ "$NAME" = "Ubuntu" ]; then
-        echo Ubuntu found: $NAME $VERSION_ID
-        # Choose repository based on Ubuntu version
-        if (( $VERSION_FULL >= 2510 )); then
-           sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/questing/winehq-questing.sources
-        elif (( $VERSION_FULL < 2510 )) && (( $VERSION_FULL >= 2504 )); then
-           sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/plucky/winehq-plucky.sources
-        elif (( $VERSION_FULL < 2410 )) && (( $VERSION_FULL >= 2400 )); then
-           sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/noble/winehq-noble.sources
-        elif (( $VERSION_FULL < 2400 )) && (( $VERSION_FULL >= 2300 )); then
-           sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/lunar/winehq-lunar.sources
-        elif (( $VERSION_FULL < 2300 )) && (( $VERSION_FULL >= 2210 )); then
-           sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/kinetic/winehq-kinetic.sources
-        elif (( $VERSION_FULL < 2210 )) && (( $VERSION_FULL >= 2100 )); then
-           sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources
-        elif (( $VERSION_FULL < 2100 )) && (($VERSION_FULL >= 2000 )); then
-           sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/focal/winehq-focal.sources
-        else
-           sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/bionic/winehq-bionic.sources
-        fi
-    elif [ "$NAME" = "Linux Mint" ]; then
-        echo Linux Mint found: $NAME $VERSION_ID
-        # Choose repository based on Linux Mint version
-        if (( $VERSION_FULL >= 2200 )); then
-           sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/noble/winehq-noble.sources
-        else
-           sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/focal/winehq-focal.sources
-        fi
-    elif [ "$NAME" = "Debian GNU/Linux" ]; then
-        echo Debian Linux found: $NAME $VERSION_ID
-        # Choose repository based on Debian version
-        if (( $VERSION_FULL >= 13 )); then
-           sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/debian/dists/trixie/winehq-trixie.sources
-        else
-           sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/debian/dists/bookworm/winehq-bookworm.sources
-        fi
+  if [ "$NAME" = "Ubuntu" ]; then
+    echo Ubuntu found: $NAME $VERSION_ID
+    # Choose repository based on Ubuntu version
+    if (($VERSION_FULL >= 2510)); then
+      sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/questing/winehq-questing.sources
+    elif (($VERSION_FULL < 2510)) && (($VERSION_FULL >= 2504)); then
+      sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/plucky/winehq-plucky.sources
+    elif (($VERSION_FULL < 2410)) && (($VERSION_FULL >= 2400)); then
+      sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/noble/winehq-noble.sources
+    elif (($VERSION_FULL < 2400)) && (($VERSION_FULL >= 2300)); then
+      sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/lunar/winehq-lunar.sources
+    elif (($VERSION_FULL < 2300)) && (($VERSION_FULL >= 2210)); then
+      sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/kinetic/winehq-kinetic.sources
+    elif (($VERSION_FULL < 2210)) && (($VERSION_FULL >= 2100)); then
+      sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources
+    elif (($VERSION_FULL < 2100)) && (($VERSION_FULL >= 2000)); then
+      sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/focal/winehq-focal.sources
     else
-        echo $NAME $VERSION_ID does not supported
-        exit
+      sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/bionic/winehq-bionic.sources
     fi
+  elif [ "$NAME" = "Linux Mint" ]; then
+    echo Linux Mint found: $NAME $VERSION_ID
+    # Choose repository based on Linux Mint version
+    if (($VERSION_FULL >= 2200)); then
+      sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/noble/winehq-noble.sources
+    else
+      sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/focal/winehq-focal.sources
+    fi
+  elif [ "$NAME" = "Debian GNU/Linux" ]; then
+    echo Debian Linux found: $NAME $VERSION_ID
+    # Choose repository based on Debian version
+    if (($VERSION_FULL >= 13)); then
+      sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/debian/dists/trixie/winehq-trixie.sources
+    else
+      sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/debian/dists/bookworm/winehq-bookworm.sources
+    fi
+  else
+    echo $NAME $VERSION_ID does not supported
+    exit
+  fi
 
-    echo Install Wine and Wine Mono
-    sudo apt update
-    sudo apt install --install-recommends winehq-$WINE_VERSION -y
+  echo Install Wine and Wine Mono
+  sudo apt update
+  sudo apt install --install-recommends winehq-$WINE_VERSION -y
 fi
 
 echo Download MetaTrader and WebView2 Runtime
