@@ -20,3 +20,7 @@ src/**.set
 
 # Ignores the framework alias generated for indicator compilation.
 src/include/EA31337-classes
+
+# Ignores directories MetaEditor drops next to the sources when compiling.
+/MQL5/
+/config/
