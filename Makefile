@@ -19,6 +19,9 @@ SHELL:=/usr/bin/env bash
 # language rules (method hiding, struct copying), whereas MT4's compiler
 # accepts it and handles the MQL4 targets built by default.
 MTE?=$(if $(wildcard metaeditor.exe),metaeditor.exe,metaeditor64.exe)
+# MetaEditor for the MQL5 targets. MT4's editor cannot compile .mq5 at all, so
+# these never fall back to MTE when it resolves to metaeditor.exe.
+MTE5?=$(if $(wildcard metaeditor64.exe),metaeditor64.exe,$(MTE))
 MTV=5.0.0.2361
 SRC=src
 MQL4=$(wildcard $(SRC)/*.mq4)
@@ -68,7 +71,8 @@ help:
 	@echo "Installing: mt4-install  mt5-install  mt5-install-indicators"
 	@echo "Other:      clean-src  requirements  help"
 	@echo
-	@echo "Variables:  MTE=$(MTE)"
+	@echo "Variables:  MTE=$(MTE)   (MQL4)"
+	@echo "            MTE5=$(MTE5)   (MQL5)"
 	@echo "            WINE=$(WINE)"
 	@echo "            OUT=$(OUT)  SRC=$(SRC)"
 	@echo
@@ -110,7 +114,7 @@ All:				requirements $(MTE) Lite-All Advanced-All Rider-All Elite-All
 
 test: requirements set-mode $(MTE)
 	$(WINE) $(MTE) .exe /s /i:$(SRC) /mql4 $(MQL4)
-	$(WINE) $(MTE) /s /i:$(SRC) /mql5 $(MQL4)
+	$(WINE) $(MTE5) /s /i:$(SRC) /mql5 $(MQL5)
 
 # Fetching MetaEditor this way no longer works: the MT-Platforms repository was
 # taken down (HTTP 451), so -f turns the 451 into a readable failure instead of
@@ -223,8 +227,9 @@ compile-mql4: requirements $(MTE) $(SRC)/$(EA).mq4 $(SRC)/include/common/mode.h 
 	file='$(MQL4)'; $(WINE) $(MTE) /log:CON /compile:"$${file//\//\\}" /inc:"$(SRC)" || true
 	test -s $(SRC)/$(EA).ex4 && echo $(MQL4) compiled.
 
-compile-mql5: requirements $(MTE) $(SRC)/$(EA).mq4 $(SRC)/include/common/mode.h clean-src
-	file='$(MQL5)'; $(WINE) $(MTE) /log:CON /compile:"$${file//\//\\}" /inc:"$(SRC)" || true
+compile-mql5: requirements $(SRC)/$(EA).mq5 $(SRC)/include/common/mode.h clean-src
+	@test -s "$(MTE5)" || { echo "$(MTE5) not found; copy metaeditor64.exe from an MT5 installation."; exit 1; }
+	file='$(MQL5)'; $(WINE) $(MTE5) /log:CON /compile:"$${file//\//\\}" /inc:"$(SRC)" || true
 	test -s $(SRC)/$(EA).ex5 && echo $(MQL5) compiled.
 
 $(OUT)/$(EA)-Lite-%.ex4: \
@@ -327,9 +332,8 @@ mt4-install:
 		@test -n "$(MT4_DIR)" || { echo "No MT4 found under $(MT4_PREFIX); set MT4_PREFIX."; exit 1; }
 		install -v "$(EX4)" "$(MT4_DIR)/MQL4/Experts"
 
-mt5-install:
+mt5-install: compile-mql5
 		@test -n "$(MT5_DIR)" || { echo "No MT5 found under $(MT5_PREFIX); set MT5_PREFIX."; exit 1; }
-		@test -s "$(EX5)" || { echo "$(EX5) missing; run: make MTE=metaeditor64.exe compile-mql5"; exit 1; }
 		install -v "$(EX5)" "$(MT5_DIR)/MQL5/Experts"
 
 # Without __resource__ the EA loads these by plain name via iCustom, so they must

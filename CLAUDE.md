@@ -42,9 +42,12 @@ make Advanced-Backtest    # + __backtest__
 make Rider-Optimize       # + __optimize__
 make All                  # every edition x every optional mode
 make compile-mql4         # compile only, using current mode.h
-make compile-mql5
+make compile-mql5         # same, via MTE5
+make indicators-mql5      # build the custom indicators (also -mql4)
 make clean-src            # remove src/*.ex4, src/*.ex5
 make mt4-install          # install the .ex4 into the Wine MT4 Experts folder
+make mt5-install          # compile MQL5 and install into MQL5/Experts
+make mt5-install-indicators   # install indicators into MQL5/Indicators
 ```
 
 Without Wine, use the Docker wrappers instead (they mount the repo and run the same Makefile
@@ -68,7 +71,9 @@ The EA version string lives in `src/include/common/define.h` (`ea_version`); the
 `make` used to fetch MetaEditor from `EA31337/MT-Platforms`, but that repository was taken
 down and now returns **HTTP 451**, so the download fails permanently. Supply the binary
 yourself by copying `metaeditor.exe` from an MT4 installation into the repo root; `MTE`
-picks it up automatically, and `.gitignore`'s `*.ex?` keeps it untracked.
+picks it up automatically, and `.gitignore`'s `*.ex?` keeps it untracked. Copy MT5's
+`MetaEditor64.exe` in as `metaeditor64.exe` too if you build MQL5 targets — `MTE5` finds it
+there. Neither is tracked, so a fresh clone needs both copied in again.
 
 **Use MT4's MetaEditor, not MT5's.** Current MT5 editors (build 6104 tested) reject the
 pinned `EA31337-classes` framework with ~100 errors — `error 226: not allowed for objects
@@ -90,7 +95,10 @@ Two Makefile variables absorb the environment differences, both overridable:
 
 - `WINE` — prefers `wine64`, falls back to `wine`. Wine 10+ builds are WoW64 and ship only
   `wine`, while the Makefile historically hardcoded `wine64`. No symlink needed.
-- `MTE` — prefers `metaeditor.exe` when present, else `metaeditor64.exe`.
+- `MTE` — MQL4 compiler; prefers `metaeditor.exe` when present, else `metaeditor64.exe`.
+- `MTE5` — MQL5 compiler; prefers `metaeditor64.exe`, and never falls back to MT4's
+  `metaeditor.exe`, which cannot compile `.mq5` at all. Used by `compile-mql5`,
+  `indicators-mql5` and the `/mql5` half of `test`.
 
 Compiler diagnostics go to `logs/metaeditor.log` (UTF-16LE, summary only). For the full
 error list, pass an explicit log file, since `/log:CON` does not reach stdout:
@@ -112,15 +120,16 @@ MetaEditor, then install:
 
 ```sh
 make set-advanced                          # or set-lite / set-rider / set-elite
-make MTE=metaeditor64.exe compile-mql5     # -> src/EA31337.ex5
-make mt5-install                           # -> <terminal>/MQL5/Experts
-make mt5-install-indicators                # -> <terminal>/MQL5/Indicators
+make mt5-install mt5-install-indicators    # compiles, then installs both
 ```
 
-`MTE=metaeditor64.exe` is required: `MTE` auto-detects MT4's `metaeditor.exe`, which cannot
-compile `.mq5` at all. `compile-mql5` does no mode switching, so whatever `mode.h` holds is
-what gets built. `MT5_PREFIX` (default `~/.mt5`) and `MT4_PREFIX` (default `~/.wine`) locate
-the terminal by searching for `terminal64.exe` / `terminal.exe`.
+`mt5-install` depends on `compile-mql5`, so it always installs a freshly built binary —
+necessary because `clean-src` runs before every compile and removes `src/*.ex?`, so a
+previously built artifact does not survive an unrelated `make Lite`.
+
+`compile-mql5` does no mode switching, so whatever `mode.h` holds is what gets built. Set the
+edition first. `MT5_PREFIX` (default `~/.mt5`) and `MT4_PREFIX` (default `~/.wine`) locate the
+terminal by searching for `terminal64.exe` / `terminal.exe`.
 
 The indicator step matters. Several strategies use custom indicators, and how they are
 resolved depends on the build mode:
